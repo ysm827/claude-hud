@@ -6,6 +6,7 @@ export const DEFAULT_ELEMENT_ORDER = [
     'project',
     'context',
     'usage',
+    'promptCache',
     'memory',
     'environment',
     'tools',
@@ -53,6 +54,8 @@ export const DEFAULT_CONFIG = {
         showClaudeCodeVersion: false,
         showEffortLevel: false,
         showMemoryUsage: false,
+        showPromptCache: false,
+        promptCacheTtlSeconds: 300,
         showSessionTokens: false,
         showOutputStyle: false,
         mergeGroups: DEFAULT_MERGE_GROUPS.map(group => [...group]),
@@ -224,6 +227,12 @@ function validateCountThreshold(value) {
     }
     return Math.max(0, Math.floor(value));
 }
+function validateDurationSeconds(value, fallback) {
+    if (typeof value !== 'number' || !Number.isFinite(value) || value <= 0) {
+        return fallback;
+    }
+    return Math.floor(value);
+}
 export function mergeConfig(userConfig) {
     const migrated = migrateConfig(userConfig);
     const language = validateLanguage(migrated.language)
@@ -323,6 +332,10 @@ export function mergeConfig(userConfig) {
         showMemoryUsage: typeof migrated.display?.showMemoryUsage === 'boolean'
             ? migrated.display.showMemoryUsage
             : DEFAULT_CONFIG.display.showMemoryUsage,
+        showPromptCache: typeof migrated.display?.showPromptCache === 'boolean'
+            ? migrated.display.showPromptCache
+            : DEFAULT_CONFIG.display.showPromptCache,
+        promptCacheTtlSeconds: validateDurationSeconds(migrated.display?.promptCacheTtlSeconds, DEFAULT_CONFIG.display.promptCacheTtlSeconds),
         showSessionTokens: typeof migrated.display?.showSessionTokens === 'boolean'
             ? migrated.display.showSessionTokens
             : DEFAULT_CONFIG.display.showSessionTokens,

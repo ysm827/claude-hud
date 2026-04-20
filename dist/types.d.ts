@@ -85,6 +85,7 @@ export interface TranscriptData {
     todos: TodoItem[];
     sessionStart?: Date;
     sessionName?: string;
+    lastAssistantResponseAt?: Date;
     sessionTokens?: SessionTokenUsage;
 }
 export interface RenderContext {

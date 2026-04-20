@@ -4,6 +4,7 @@ export const en = {
     "label.usage": "Usage",
     "label.weekly": "Weekly",
     "label.approxRam": "Approx RAM",
+    "label.promptCache": "Cache",
     "label.rules": "rules",
     "label.hooks": "hooks",
     "label.estimatedCost": "Est.",
@@ -11,6 +12,7 @@ export const en = {
     // Status
     "status.limitReached": "Limit reached",
     "status.allTodosComplete": "All todos complete",
+    "status.expired": "expired",
     // Format
     "format.resets": "resets",
     "format.resetsIn": "resets in",

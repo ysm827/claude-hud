@@ -4,6 +4,7 @@ import { getOutputSpeed } from '../speed-tracker.js';
 import { coloredBar, critical, git as gitColor, gitBranch as gitBranchColor, label, model as modelColor, project as projectColor, getContextColor, getQuotaColor, quotaBar, custom as customColor, RESET } from './colors.js';
 import { getAdaptiveBarWidth } from '../utils/terminal.js';
 import { renderCostEstimate } from './lines/cost.js';
+import { renderPromptCacheLine } from './lines/prompt-cache.js';
 import { t } from '../i18n/index.js';
 import { formatResetTime } from './format-reset-time.js';
 const DEBUG = process.env.DEBUG?.includes('claude-hud') || process.env.DEBUG === '*';
@@ -245,6 +246,10 @@ export function renderSessionLine(ctx) {
     }
     if (display?.showDuration !== false && ctx.sessionDuration) {
         parts.push(label(`⏱️  ${ctx.sessionDuration}`, colors));
+    }
+    const promptCacheLine = renderPromptCacheLine(ctx);
+    if (promptCacheLine) {
+        parts.push(promptCacheLine);
     }
     const costEstimate = renderCostEstimate(ctx);
     if (costEstimate) {
