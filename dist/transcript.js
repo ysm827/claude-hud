@@ -28,6 +28,14 @@ function getTranscriptCachePath(transcriptPath, homeDir) {
     const hash = createHash('sha256').update(path.resolve(transcriptPath)).digest('hex');
     return path.join(getHudPluginDir(homeDir), 'transcript-cache', `${hash}.json`);
 }
+function canonicalizeTranscriptPath(transcriptPath) {
+    try {
+        return fs.realpathSync(transcriptPath);
+    }
+    catch {
+        return null;
+    }
+}
 function readTranscriptFileState(transcriptPath) {
     try {
         const stat = fs.statSync(transcriptPath);
@@ -110,7 +118,7 @@ function writeTranscriptCache(transcriptPath, state, data) {
             transcriptState: state,
             data: serializeTranscriptData(data),
         };
-        fs.writeFileSync(cachePath, JSON.stringify(payload), 'utf8');
+        fs.writeFileSync(cachePath, JSON.stringify(payload), { encoding: 'utf8', mode: 0o600 });
     }
     catch {
         // Cache failures are non-fatal; fall back to fresh parsing next time.
@@ -125,11 +133,15 @@ export async function parseTranscript(transcriptPath) {
     if (!transcriptPath || !fs.existsSync(transcriptPath)) {
         return result;
     }
-    const transcriptState = readTranscriptFileState(transcriptPath);
+    const canonicalTranscriptPath = canonicalizeTranscriptPath(transcriptPath);
+    if (!canonicalTranscriptPath) {
+        return result;
+    }
+    const transcriptState = readTranscriptFileState(canonicalTranscriptPath);
     if (!transcriptState) {
         return result;
     }
-    const cached = readTranscriptCache(transcriptPath, transcriptState);
+    const cached = readTranscriptCache(canonicalTranscriptPath, transcriptState);
     if (cached) {
         return cached;
     }
@@ -147,7 +159,7 @@ export async function parseTranscript(transcriptPath) {
     };
     let parsedCleanly = false;
     try {
-        const fileStream = createReadStreamImpl(transcriptPath);
+        const fileStream = createReadStreamImpl(canonicalTranscriptPath);
         const rl = readline.createInterface({
             input: fileStream,
             crlfDelay: Infinity,
@@ -188,7 +200,7 @@ export async function parseTranscript(transcriptPath) {
     result.sessionName = customTitle ?? latestSlug;
     result.sessionTokens = sessionTokens;
     if (parsedCleanly) {
-        writeTranscriptCache(transcriptPath, transcriptState, result);
+        writeTranscriptCache(canonicalTranscriptPath, transcriptState, result);
     }
     return result;
 }
