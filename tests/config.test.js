@@ -91,11 +91,22 @@ test('getConfigPath returns correct path', () => {
   }
 });
 
-test('mergeConfig defaults showSessionName to false', () => {
+test('mergeConfig defaults forceMaxWidth to false', () => {
   const config = mergeConfig({});
-  assert.equal(config.display.showSessionName, false);
-  assert.equal(DEFAULT_CONFIG.display.showSessionName, false);
+  assert.equal(config.forceMaxWidth, false);
+  assert.equal(DEFAULT_CONFIG.forceMaxWidth, false);
 });
+
+test('mergeConfig preserves explicit forceMaxWidth=true', () => {
+  const config = mergeConfig({ forceMaxWidth: true });
+  assert.equal(config.forceMaxWidth, true);
+});
+
+test('mergeConfig falls back to false for invalid forceMaxWidth values', () => {
+  assert.equal(mergeConfig({ forceMaxWidth: 'yes' }).forceMaxWidth, false);
+  assert.equal(mergeConfig({ forceMaxWidth: 1 }).forceMaxWidth, false);
+});
+
 
 test('mergeConfig preserves explicit showSessionName=true', () => {
   const config = mergeConfig({ display: { showSessionName: true } });
