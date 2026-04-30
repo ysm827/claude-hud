@@ -256,6 +256,101 @@ test("CLI ignores non-string and post-sanitize-empty added_dirs entries", async 
   }
 });
 
+test("CLI caps inline added_dirs at 5 with overflow indicator", async (t) => {
+  const fixturePath = fileURLToPath(
+    new URL("./fixtures/transcript-render.jsonl", import.meta.url),
+  );
+  const homeDir = await mkdtemp(path.join(tmpdir(), "claude-hud-home-"));
+  const projectDir = path.join(homeDir, "dev", "apps", "my-project");
+  const dirs = Array.from({ length: 7 }, (_, i) =>
+    path.join(homeDir, "dev", "apps", `dir-${i + 1}`),
+  );
+  await import("node:fs/promises").then((fs) =>
+    Promise.all([
+      fs.mkdir(projectDir, { recursive: true }),
+      ...dirs.map((d) => fs.mkdir(d, { recursive: true })),
+    ]),
+  );
+  try {
+    const stdin = JSON.stringify({
+      model: { display_name: "Opus" },
+      context_window: {
+        context_window_size: 200000,
+        current_usage: { input_tokens: 45000 },
+      },
+      transcript_path: fixturePath,
+      cwd: projectDir,
+      workspace: { added_dirs: dirs },
+    });
+
+    const result = spawnSync("node", ["dist/index.js"], {
+      cwd: path.resolve(process.cwd()),
+      input: stdin,
+      encoding: "utf8",
+      env: { ...process.env, HOME: homeDir, LANG: "C" },
+    });
+
+    if (skipIfSpawnBlocked(result, t)) return;
+
+    assert.equal(result.status, 0, result.stderr || "non-zero exit");
+    const firstLine = stripAnsi(result.stdout).split("\n")[0];
+    for (let i = 1; i <= 5; i++) {
+      assert.match(firstLine, new RegExp(`\\+dir-${i}\\b`));
+    }
+    assert.doesNotMatch(firstLine, /\+dir-6\b/);
+    assert.doesNotMatch(firstLine, /\+dir-7\b/);
+    assert.match(firstLine, /\+2 more/);
+  } finally {
+    await rm(homeDir, { recursive: true, force: true });
+  }
+});
+
+test("CLI truncates long inline added_dirs basenames", async (t) => {
+  const fixturePath = fileURLToPath(
+    new URL("./fixtures/transcript-render.jsonl", import.meta.url),
+  );
+  const homeDir = await mkdtemp(path.join(tmpdir(), "claude-hud-home-"));
+  const projectDir = path.join(homeDir, "dev", "apps", "my-project");
+  const longName = "a".repeat(40);
+  const longDir = path.join(homeDir, "dev", "apps", longName);
+  await import("node:fs/promises").then((fs) =>
+    Promise.all([
+      fs.mkdir(projectDir, { recursive: true }),
+      fs.mkdir(longDir, { recursive: true }),
+    ]),
+  );
+  try {
+    const stdin = JSON.stringify({
+      model: { display_name: "Opus" },
+      context_window: {
+        context_window_size: 200000,
+        current_usage: { input_tokens: 45000 },
+      },
+      transcript_path: fixturePath,
+      cwd: projectDir,
+      workspace: { added_dirs: [longDir] },
+    });
+
+    const result = spawnSync("node", ["dist/index.js"], {
+      cwd: path.resolve(process.cwd()),
+      input: stdin,
+      encoding: "utf8",
+      env: { ...process.env, HOME: homeDir, LANG: "C" },
+    });
+
+    if (skipIfSpawnBlocked(result, t)) return;
+
+    assert.equal(result.status, 0, result.stderr || "non-zero exit");
+    const firstLine = stripAnsi(result.stdout).split("\n")[0];
+    assert.match(firstLine, /\+a+…/, "long basename should be truncated with ellipsis");
+    assert.doesNotMatch(firstLine, new RegExp(`\\+${longName}`));
+    const m = firstLine.match(/\+(a+…)/);
+    assert.ok(m && m[1].length <= 24, `truncated name should be ≤24 chars, got ${m && m[1].length}`);
+  } finally {
+    await rm(homeDir, { recursive: true, force: true });
+  }
+});
+
 test("CLI prints initializing message on empty stdin", async (t) => {
   const homeDir = await mkdtemp(path.join(tmpdir(), "claude-hud-home-"));
 

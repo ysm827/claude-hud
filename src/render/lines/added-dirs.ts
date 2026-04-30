@@ -16,9 +16,20 @@ export function sanitize(value: string): string {
   return value.replace(CONTROL_AND_BIDI_PATTERN, '');
 }
 
-function basenameOf(dir: string): string {
+export function basenameOf(dir: string): string {
   const segments = dir.split(/[/\\]/).filter(Boolean);
   return segments[segments.length - 1] ?? dir;
+}
+
+export const MAX_RENDERED_ADDED_DIRS = 5;
+export const MAX_ADDED_DIR_NAME_LEN = 24;
+
+// Length is measured in UTF-16 code units, not grapheme clusters; a name
+// of mostly 4-byte codepoints (emoji, rare CJK) may render slightly wider
+// than MAX_ADDED_DIR_NAME_LEN. Acceptable simplification for a statusline.
+export function truncateBasename(name: string): string {
+  if (name.length <= MAX_ADDED_DIR_NAME_LEN) return name;
+  return name.slice(0, MAX_ADDED_DIR_NAME_LEN - 1) + '…';
 }
 
 export function normalizeAddedDirs(value: unknown): string[] {
@@ -65,10 +76,15 @@ export function renderAddedDirsLine(ctx: RenderContext): string | null {
   if (dirs.length === 0) return null;
 
   const colors = ctx.config?.colors;
-  const rendered = dirs.map((dir) => {
-    const name = sanitize(basenameOf(dir));
+  const visible = dirs.slice(0, MAX_RENDERED_ADDED_DIRS);
+  const overflow = dirs.length - visible.length;
+  const rendered = visible.map((dir) => {
+    const name = truncateBasename(sanitize(basenameOf(dir)));
     return safeHyperlink(getFileHref(dir), dim(name));
   });
+  if (overflow > 0) {
+    rendered.push(dim(`+${overflow} more`));
+  }
 
   return `${label('Added dirs:', colors)} ${rendered.join(dim(', '))}`;
 }

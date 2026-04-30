@@ -7,7 +7,7 @@ import { getOutputSpeed } from '../../speed-tracker.js';
 import { git as gitColor, gitBranch as gitBranchColor, warning as warningColor, critical as criticalColor, label, model as modelColor, project as projectColor, red, green, yellow, dim, custom as customColor } from '../colors.js';
 import { t } from '../../i18n/index.js';
 import { renderCostEstimate } from './cost.js';
-import { normalizeAddedDirs, sanitize as sanitizeDisplayText } from './added-dirs.js';
+import { normalizeAddedDirs, sanitize as sanitizeDisplayText, basenameOf, truncateBasename, MAX_RENDERED_ADDED_DIRS } from './added-dirs.js';
 
 function hyperlink(uri: string, text: string): string {
   const esc = '\x1b';
@@ -81,12 +81,16 @@ export function renderProjectLine(ctx: RenderContext): string | null {
   const addedDirs = normalizeAddedDirs(ctx.stdin.workspace?.added_dirs);
   const addedDirsLayout = display?.addedDirsLayout ?? 'inline';
   if (display?.showAddedDirs !== false && addedDirsLayout === 'inline' && addedDirs.length > 0) {
-    const rendered = addedDirs.map((dir) => {
-      const segments = dir.split(/[/\\]/).filter(Boolean);
-      const name = sanitizeDisplayText(segments[segments.length - 1] ?? dir);
+    const visible = addedDirs.slice(0, MAX_RENDERED_ADDED_DIRS);
+    const overflow = addedDirs.length - visible.length;
+    const rendered = visible.map((dir) => {
+      const name = truncateBasename(sanitizeDisplayText(basenameOf(dir)));
       const text = dim(`+${name}`);
       return safeHyperlink(getFileHref(dir), text);
     });
+    if (overflow > 0) {
+      rendered.push(dim(`+${overflow} more`));
+    }
     addedDirsPart = rendered.join(' ');
   }
 
