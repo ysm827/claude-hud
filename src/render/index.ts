@@ -8,6 +8,7 @@ import { renderTodosLine } from './todos-line.js';
 import {
   renderIdentityLine,
   renderProjectLine,
+  renderAddedDirsLine,
   renderGitFilesLine,
   renderEnvironmentLine,
   renderPromptCacheLine,
@@ -356,6 +357,8 @@ function renderElementLine(
   switch (element) {
     case 'project':
       return renderProjectLine(ctx);
+    case 'addedDirs':
+      return renderAddedDirsLine(ctx);
     case 'context':
       return renderIdentityLine(ctx, alignProgressLabels);
     case 'usage':
