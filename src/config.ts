@@ -19,7 +19,7 @@ export type GitBranchOverflowMode = 'truncate' | 'wrap';
  *   short:   Strip context suffix AND "Claude " prefix (e.g. "Opus 4.6")
  */
 export type ModelFormatMode = 'full' | 'compact' | 'short';
-export type TimeFormatMode = 'relative' | 'absolute' | 'both';
+export type TimeFormatMode = 'relative' | 'absolute' | 'both' | 'elapsed' | 'elapsedAndAbsolute';
 export type HudElement = 'project' | 'addedDirs' | 'context' | 'usage' | 'promptCache' | 'memory' | 'environment' | 'tools' | 'agents' | 'todos' | 'sessionTime';
 
 export type AddedDirsLayout = 'inline' | 'line';
@@ -107,6 +107,8 @@ export interface HudConfig {
     showResetLabel: boolean;
     usageCompact: boolean;
     showTools: boolean;
+    toolNameMaxLength: number;
+    toolsMaxVisible: number;
     showAgents: boolean;
     showTodos: boolean;
     showSessionName: boolean;
@@ -172,6 +174,8 @@ export const DEFAULT_CONFIG: HudConfig = {
     showResetLabel: true,
     usageCompact: false,
     showTools: false,
+    toolNameMaxLength: 0,
+    toolsMaxVisible: 4,
     showAgents: false,
     showTodos: false,
     showSessionName: false,
@@ -254,7 +258,11 @@ function validateModelFormat(value: unknown): value is ModelFormatMode {
 }
 
 function validateTimeFormat(value: unknown): value is TimeFormatMode {
-  return value === 'relative' || value === 'absolute' || value === 'both';
+  return value === 'relative'
+    || value === 'absolute'
+    || value === 'both'
+    || value === 'elapsed'
+    || value === 'elapsedAndAbsolute';
 }
 
 function validateColorName(value: unknown): value is HudColorName {
@@ -419,6 +427,13 @@ function validateDurationSeconds(value: unknown, fallback: number): number {
   return Math.floor(value);
 }
 
+function validateNonNegativeInteger(value: unknown, fallback: number): number {
+  if (typeof value !== 'number' || !Number.isInteger(value) || value < 0) {
+    return fallback;
+  }
+  return value;
+}
+
 function validateOptionalPath(value: unknown): string {
   return typeof value === 'string' ? value.trim() : '';
 }
@@ -530,6 +545,14 @@ export function mergeConfig(userConfig: Partial<HudConfig>): HudConfig {
     showTools: typeof migrated.display?.showTools === 'boolean'
       ? migrated.display.showTools
       : DEFAULT_CONFIG.display.showTools,
+    toolNameMaxLength: validateNonNegativeInteger(
+      migrated.display?.toolNameMaxLength,
+      DEFAULT_CONFIG.display.toolNameMaxLength,
+    ),
+    toolsMaxVisible: validateNonNegativeInteger(
+      migrated.display?.toolsMaxVisible,
+      DEFAULT_CONFIG.display.toolsMaxVisible,
+    ),
     showAgents: typeof migrated.display?.showAgents === 'boolean'
       ? migrated.display.showAgents
       : DEFAULT_CONFIG.display.showAgents,
