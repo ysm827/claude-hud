@@ -674,6 +674,30 @@ Merge with existing config if the file already exists. Only write keys the user 
 
 **If user selects nothing** (or picks "Other" and says skip/none), do not create a config file. The defaults are fine.
 
+### Step 4.5: Auto-Refresh (Optional)
+
+Claude Code only re-runs the statusline after an interaction (a new assistant message, `/compact` finishing, a permission-mode change, or a vim-mode toggle). Time-based HUD data — session duration, usage reset countdowns, the prompt-cache countdown — therefore goes stale between messages. Claude Code supports an optional `refreshInterval` key (seconds, minimum 1) on the `statusLine` settings object that re-runs the command every N seconds.
+
+Of those, only the usage reset countdown is shown by default — session duration and the prompt-cache countdown tick only if the user enabled them (e.g. "Session info" in Step 4, or via config). Mention this if the user seems unsure whether the timer is worth it.
+
+Ask with AskUserQuestion:
+- header: "Auto-refresh"
+- question: "Re-run the HUD on a timer so time-based info (session duration, usage countdowns) stays current between messages?"
+- options:
+  - "Every 5 seconds (Recommended)" — Keeps countdowns fresh with negligible overhead
+  - "Every 1 second" — Smoothest ticking; re-runs the HUD command far more often
+  - "No timer" — HUD updates only after interactions (Claude Code's default)
+
+**If the user picks an interval**, merge `refreshInterval: <N>` into the **existing** `statusLine` object in `settings.json` — preserve `type`, `command`, and any other keys. Follow the same rules as Step 3: real JSON serializer, no BOM on Windows, retry once on a concurrent-modification error. Do not re-create the backup; the Step 2.5.3 backup already covers this session.
+
+**If the user picks "Other" and gives a numeric interval** (e.g. "10" or "10 seconds"), use that value, clamped to a minimum of 1. Treat a non-numeric "Other" answer that declines (skip/none/no) like "No timer".
+
+**If the user picks "No timer"**, do not write the key. If a `refreshInterval` key already exists in `statusLine` from a previous run and the user explicitly chose "No timer", remove it.
+
+`refreshInterval` lives in `settings.json`, which Claude Code reloads automatically — ticking should start after the user's next interaction. If countdowns don't tick in the current session, tell the user it will take effect after a Claude Code restart; do not treat a non-ticking timer as a setup failure in Step 5.
+
+Each refresh re-runs the full HUD command (runtime startup, transcript parse, git status), so 5 seconds is the recommended default; only suggest 1 second when the user wants visibly smooth countdowns.
+
 ---
 
 ## Step 5: Verify & Finish
